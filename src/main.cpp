@@ -7,8 +7,8 @@
 #include "AudioOutputI2S.h"
 #include "SPIFFS.h"
 
-// 音圧の閾値（最大32767の範囲で設定）
-#define threshold 23000
+// 音圧の閾値（最大32767の範囲で設定／距離15cm・70～80dBで5000前後？）
+#define threshold 2500
 
 // 注意音声のファイル名
 #define warning "/alert.mp3"
