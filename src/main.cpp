@@ -93,30 +93,16 @@ void setup() {
 // マイクバッファ
 #define BUFF_SIZE 1024
 uint8_t readBuff[BUFF_SIZE];
-int16_t sumData, maxData, maxVol, dcBias = 0;
-size_t bytesread, byteswritten;
-void loop() {
-  // M5Atomの更新
-  M5.update();
-
-  // 音声再生中の場合
-  if (playing) {
-    // 音声再生を続ける
-    if (mp3->isRunning()) {
-      if (!mp3->loop()) {
-        mp3->stop();
-        playing = false;
-        // 10秒は再警告しない
-        delay(10000);
-        // マイクモード再設定
-        InitI2SSpeakerOrMic(MODE_MIC);
-        M5.dis.drawpix(0, CRGB(0, 128, 0));
-      }
-    }
-    return;
-  }
-
+int16_t sumData, maxData, dcBias = 0;
+size_t bytesread;
+/**
+ * マイク入力から最大音量取得.
+ * @see https://qiita.com/tomoto335/items/263b23d9ba156de12857
+ * @return 最大音量
+ */
+int16_t getMaxVol() {
   // マイクからの平均音圧を取得する
+  i2s_zero_dma_buffer(I2S_NUM);
   i2s_read(I2S_NUM, (char *)readBuff, BUFF_SIZE, &bytesread,
            (100 / portTICK_RATE_MS));
   // マイク入力のサンプルbit数(16bit)へ変換しつつ最大／平均値を特定
@@ -132,10 +118,37 @@ void loop() {
   // @see https://qiita.com/tomoto335/items/263b23d9ba156de12857
   const float alpha = 0.98;
   dcBias = dcBias * alpha + (sumData / (BUFF_SIZE / 2)) * (1 - alpha);
-  maxVol = maxData - dcBias;
-  Serial.println(maxVol);
+  return maxData - dcBias;
+}
+
+void loop() {
+  // M5Atomの更新
+  M5.update();
+
+  // 音声再生中の場合
+  if (playing) {
+    // 音声再生を続ける
+    if (mp3->isRunning()) {
+      if (!mp3->loop()) {
+        mp3->stop();
+        playing = false;
+        // マイクモード再設定
+        InitI2SSpeakerOrMic(MODE_MIC);
+        // 10秒は再警告しない
+        for (int i = 0; i < 100; i++) {
+          // DCバイアス補正のため100ms毎にマイク入力
+          getMaxVol();
+          delay(100);
+        }
+        M5.dis.drawpix(0, CRGB(0, 128, 0));
+      }
+    }
+    return;
+  }
 
   // 音圧が閾値を超えた場合
+  int16_t maxVol = getMaxVol();
+  Serial.println(maxVol);
   if (maxVol > threshold) {
     // 注意音声を再生する
     InitI2SSpeakerOrMic(MODE_SPK);
