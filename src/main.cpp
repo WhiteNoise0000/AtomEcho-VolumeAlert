@@ -110,6 +110,7 @@ void loop() {
         delay(10000);
         // マイクモード再設定
         InitI2SSpeakerOrMic(MODE_MIC);
+        M5.dis.drawpix(0, CRGB(0, 128, 0));
       }
     }
     return;
@@ -138,6 +139,7 @@ void loop() {
   if (maxVol > threshold) {
     // 注意音声を再生する
     InitI2SSpeakerOrMic(MODE_SPK);
+    M5.dis.drawpix(0, CRGB(128, 0, 0));
     // 注意音声(mp3)
     file = new AudioFileSourceSPIFFS(warning);
     mp3 = new AudioGeneratorMP3();
